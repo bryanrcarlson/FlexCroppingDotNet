@@ -1,0 +1,1 @@
+Simple script to convert provided weather data from csv to UED file format
