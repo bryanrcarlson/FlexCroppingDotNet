@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using UED_simple;
 using Ued;
 
 namespace scriptConvertHistoricWeatherCsvToUed
@@ -18,8 +19,8 @@ namespace scriptConvertHistoricWeatherCsvToUed
         ///     Open all dirs, ensure file count is same, ensure locations consistant
         ///     Ensure all locations have geocoordinate info (in location_geocoordinates.csv)
         /// Create UED object
-        ///     (should I create this class in a Ued library?)
-        ///     Assign years, lat/lon, meta-data
+        ///     recreate output dir
+        ///     lat/lon, meta-data
         ///     Add to Ueds
         /// Foreach Ued in Ueds
         ///     Foreach year in Years
@@ -29,7 +30,7 @@ namespace scriptConvertHistoricWeatherCsvToUed
         ///     Save Ued
 
         const string relativePathToLocations = @"location_geocoordinates.csv";
-
+        const string relativePathToUedOut = @"ued_files";
         static void Main(string[] args)
         {
             DirectoryInfo dataDirectory;
@@ -47,7 +48,7 @@ namespace scriptConvertHistoricWeatherCsvToUed
             ///     Read all dir, convert to years, add to list Years
             ///     Open first dir, count num files, convert to location points, and to LocationIds
             ///     Open all dirs, ensure file count is same, ensure locations consistant
-            foreach (DirectoryInfo d in dataDirectory.GetDirectories())
+            foreach (DirectoryInfo d in dataDirectory.GetDirectories("y*"))
             {
                 // Assumes dir name y{YYYY}, removes beginning "y"
                 string year = d.Name.ToString().Remove(0,1);
@@ -85,10 +86,132 @@ namespace scriptConvertHistoricWeatherCsvToUed
 
             List<Location> matchingObjects = Locations
                 .Where(l => LocationIds.Contains(l.Fid.ToString())).ToList();
-            if(matchingObjects.Count != Locations.Count)
+            if (matchingObjects.Count != Locations.Count)
                 throw new Exception("Not all location files have corresponding geocoordinates - count is not equal");
-        }
 
+            /// Create UED object
+            ///     remake output directory   
+            DirectoryInfo pathToUedOutput = new DirectoryInfo(Path.Combine(
+                dataDirectory.ToString(), relativePathToUedOut));
+            if (Directory.Exists(pathToUedOutput.ToString()))
+                Directory.Delete(pathToUedOutput.ToString(), true);
+
+            Directory.CreateDirectory(pathToUedOutput.ToString());
+
+            ///     lat/lon, meta-data
+            List<FileInfo> uedFiles = new List<FileInfo>();
+            foreach(Location loc in Locations)
+            {
+                //FileInfo uedFile = new FileInfo(
+                //    Path.Combine(
+                //        pathToUedOutput.ToString(),  
+                //        loc.Fid.ToString() + ".UED"));
+
+                using (Database db = new Database(
+                    Path.Combine(dataDirectory.ToString(), relativePathToUedOut, loc.Fid.ToString() + ".UED")))
+                {
+                    db.set_geolocation(
+                        loc.Latitude,
+                        loc.Longitude,
+                        0, 3,
+                        loc.Fid.ToString(),
+                        loc.Fid.ToString(),
+                        "",
+                        "",
+                        "",
+                        "Created with scriptConvertHistoricWeatherCsvToUed");
+
+                    // Loop through all folders and read location's csv file
+                    foreach(string year in Years)
+                    {
+                        string dirName = "y" + year;
+                        string fileName = "year" + year + "_" + 
+                            loc.Fid.ToString() + ".csv";
+                        FileInfo file = new FileInfo(Path.Combine(
+                            dataDirectory.ToString(), 
+                            dirName, 
+                            fileName));
+
+                        using (TextReader reader = File.OpenText(file.ToString()))
+                        {
+                            CsvReader csv = new CsvReader(reader);
+                            csv.Configuration.RegisterClassMap<WeatherClassMap>();
+                            var weather = csv.GetRecords<WeatherData>();
+
+                            foreach(var w in weather)
+                            {
+                                // Set rH max
+                                db.set_for_date(
+                                    (float)w.MaximumRelativeHumidity,
+                                    getDateInt(year, w.DayOfYear),
+                                    (uint)Ued.Core.UedVariableCode.Weather_RelativeHumidityMax,
+                                    0x3,
+                                    (uint)Ued.Core.UedQualityCode.calculated_quality);
+
+                                // Set rH min
+                                db.set_for_date(
+                                    (float)w.MinimumRelativeHumidity,
+                                    getDateInt(year, w.DayOfYear),
+                                    (uint)Ued.Core.UedVariableCode.Weather_RelativeHumidityMin,
+                                    0x3,
+                                    (uint)Ued.Core.UedQualityCode.calculated_quality);
+
+                                // Set solar rad
+                                db.set_for_date(
+                                    (float)w.SolarRadiation,
+                                    getDateInt(year, w.DayOfYear),
+                                    (uint)Ued.Core.UedVariableCode.Weather_SolarRadiation,
+                                    0x28804c06,
+                                    (uint)Ued.Core.UedQualityCode.calculated_quality);
+
+                                // Set wind speed
+                                db.set_for_date(
+                                    (float)w.WindSpeed,
+                                    getDateInt(year, w.DayOfYear),
+                                    (uint)Ued.Core.UedVariableCode.Weather_WindSpeed,
+                                    0x16802000,
+                                    (uint)Ued.Core.UedQualityCode.calculated_quality);
+
+                                // Set temp max
+                                db.set_for_date(
+                                    (float)w.MaximumTemperature,
+                                    getDateInt(year, w.DayOfYear),
+                                    (uint)Ued.Core.UedVariableCode.Weather_TemperatureMax,
+                                    0x100,
+                                    (uint)Ued.Core.UedQualityCode.calculated_quality);
+
+                                // Set temp min
+                                db.set_for_date(
+                                    (float)w.MinimumTemperature,
+                                    getDateInt(year, w.DayOfYear),
+                                    (uint)Ued.Core.UedVariableCode.Weather_TemperatureMin,
+                                    0x100,
+                                    (uint)Ued.Core.UedQualityCode.calculated_quality);
+
+                                // Set precip
+                                db.set_for_date(
+                                    (float)w.Precipitation,
+                                    getDateInt(year, w.DayOfYear),
+                                    (uint)Ued.Core.UedVariableCode.Weather_Precipitation,
+                                    0x5820001,
+                                    (uint)Ued.Core.UedQualityCode.calculated_quality);
+                            }
+                        }
+                    }
+
+                    db.close();
+                }
+
+                ///     Add to Ueds
+                //uedFiles.Add(uedFile);
+            } 
+            
+
+        }
+        static int getDateInt(string year, int dayOfYear)
+        {
+            return (1000 * Convert.ToInt32(year)) + dayOfYear;
+        }
         static List<string> getLocations(DirectoryInfo directory)
         {
             List<string> locations = new List<string>();
