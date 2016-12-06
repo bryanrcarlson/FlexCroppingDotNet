@@ -1,4 +1,5 @@
-﻿using System;
+﻿using CsvHelper;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -13,7 +14,7 @@ namespace scriptConvertHistoricWeatherCsvToUed
         /// Open either working directory or dir as specified in args
         /// Setup and validate directories and objects
         ///     Read all dir, convert to years, add to list Years
-        ///     Open first dir, count num files, convert to location points, and to Locations
+        ///     Open first dir, count num files, convert to location points, and to LocationIds
         ///     Open all dirs, ensure file count is same, ensure locations consistant
         ///     Ensure all locations have geocoordinate info (in location_geocoordinates.csv)
         /// Create UED object
@@ -26,11 +27,14 @@ namespace scriptConvertHistoricWeatherCsvToUed
         ///         Read corresponding weather csv file
         ///         Write weather variables to Ued
         ///     Save Ued
+
+        const string relativePathToLocations = @"location_geocoordinates.csv";
+
         static void Main(string[] args)
         {
             DirectoryInfo dataDirectory;
             List<string> Years = new List<string>();
-            List<string> Locations = new List<string>();
+            List<string> LocationIds = new List<string>();
             int FileCount = -1;
 
             /// Open either working directory or dir as specified in args
@@ -41,7 +45,7 @@ namespace scriptConvertHistoricWeatherCsvToUed
 
             /// Setup and validate directories and objects
             ///     Read all dir, convert to years, add to list Years
-            ///     Open first dir, count num files, convert to location points, and to Locations
+            ///     Open first dir, count num files, convert to location points, and to LocationIds
             ///     Open all dirs, ensure file count is same, ensure locations consistant
             foreach (DirectoryInfo d in dataDirectory.GetDirectories())
             {
@@ -59,18 +63,30 @@ namespace scriptConvertHistoricWeatherCsvToUed
                 }
 
                 // Check that directories have the same location IDs
-                if (Locations.Count == 0)
-                    Locations = getLocations(d);
+                if (LocationIds.Count == 0)
+                    LocationIds = getLocations(d);
                 else
                 {
-                    if (Locations.Except(getLocations(d)).Count() > 0)
+                    if (LocationIds.Except(getLocations(d)).Count() > 0)
                         throw new Exception("Non consistant location files");
                 }
             }
 
             ///     Ensure all locations have geocoordinate info (in location_geocoordinates.csv)
-            ///     
+            List<Location> Locations = new List<Location>();
+            using (TextReader reader = File.OpenText(relativePathToLocations))
+            {
+                CsvReader csv = new CsvReader(reader);
+                Locations = csv.GetRecords<Location>().ToList();
+            }
+            // LocationIds count should be same as Locations
+            if (LocationIds.Count != Locations.Count)
+                throw new Exception("Not all location files have corresponding geocoordinates - count is not equal");
 
+            List<Location> matchingObjects = Locations
+                .Where(l => LocationIds.Contains(l.Fid.ToString())).ToList();
+            if(matchingObjects.Count != Locations.Count)
+                throw new Exception("Not all location files have corresponding geocoordinates - count is not equal");
         }
 
         static List<string> getLocations(DirectoryInfo directory)
