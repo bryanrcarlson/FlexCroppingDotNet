@@ -145,7 +145,7 @@ namespace scriptConvertHistoricWeatherCsvToUed
                                     (float)w.MaximumRelativeHumidity,
                                     getDateInt(year, w.DayOfYear),
                                     (uint)Ued.Core.UedVariableCode.Weather_RelativeHumidityMax,
-                                    0x3,
+                                    (uint)Ued.Core.UedUnitCode.Percent,
                                     (uint)Ued.Core.UedQualityCode.calculated_quality);
 
                                 // Set rH min
@@ -153,7 +153,7 @@ namespace scriptConvertHistoricWeatherCsvToUed
                                     (float)w.MinimumRelativeHumidity,
                                     getDateInt(year, w.DayOfYear),
                                     (uint)Ued.Core.UedVariableCode.Weather_RelativeHumidityMin,
-                                    0x3,
+                                    (uint)Ued.Core.UedUnitCode.Percent,
                                     (uint)Ued.Core.UedQualityCode.calculated_quality);
 
                                 // Set solar rad
@@ -161,7 +161,7 @@ namespace scriptConvertHistoricWeatherCsvToUed
                                     (float)w.SolarRadiation,
                                     getDateInt(year, w.DayOfYear),
                                     (uint)Ued.Core.UedVariableCode.Weather_SolarRadiation,
-                                    0x28804c06,
+                                    (uint)Ued.Core.UedUnitCode.MegaJoulesPerSquareMeterDay,
                                     (uint)Ued.Core.UedQualityCode.calculated_quality);
 
                                 // Set wind speed
@@ -169,7 +169,7 @@ namespace scriptConvertHistoricWeatherCsvToUed
                                     (float)w.WindSpeed,
                                     getDateInt(year, w.DayOfYear),
                                     (uint)Ued.Core.UedVariableCode.Weather_WindSpeed,
-                                    0x16802000,
+                                    (uint)Ued.Core.UedUnitCode.MetersPerSecond,
                                     (uint)Ued.Core.UedQualityCode.calculated_quality);
 
                                 // Set temp max
@@ -177,7 +177,7 @@ namespace scriptConvertHistoricWeatherCsvToUed
                                     (float)w.MaximumTemperature,
                                     getDateInt(year, w.DayOfYear),
                                     (uint)Ued.Core.UedVariableCode.Weather_TemperatureMax,
-                                    0x100,
+                                    (uint)Ued.Core.UedUnitCode.CelsiusDegree,
                                     (uint)Ued.Core.UedQualityCode.calculated_quality);
 
                                 // Set temp min
@@ -185,7 +185,7 @@ namespace scriptConvertHistoricWeatherCsvToUed
                                     (float)w.MinimumTemperature,
                                     getDateInt(year, w.DayOfYear),
                                     (uint)Ued.Core.UedVariableCode.Weather_TemperatureMin,
-                                    0x100,
+                                    (uint)Ued.Core.UedUnitCode.CelsiusDegree,
                                     (uint)Ued.Core.UedQualityCode.calculated_quality);
 
                                 // Set precip
@@ -193,7 +193,7 @@ namespace scriptConvertHistoricWeatherCsvToUed
                                     (float)w.Precipitation,
                                     getDateInt(year, w.DayOfYear),
                                     (uint)Ued.Core.UedVariableCode.Weather_Precipitation,
-                                    0x5820001,
+                                    (uint)Ued.Core.UedUnitCode.Milimeter,
                                     (uint)Ued.Core.UedQualityCode.calculated_quality);
                             }
                         }
