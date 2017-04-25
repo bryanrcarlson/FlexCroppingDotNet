@@ -29,8 +29,10 @@ namespace scriptConvertHistoricWeatherCsvToUed
         ///         Write weather variables to Ued
         ///     Save Ued
 
-        const string relativePathToLocations = @"location_geocoordinates.csv";
-        const string relativePathToUedOut = @"ued_files";
+        const string RELATIVE_PATH_TO_LOCATIONS = @"location_geocoordinates.csv";
+        const string RELATIVE_PATH_TO_UED = @"ued_files";
+        const int DEFAULT_SCREENING_HEIGHT = 2;
+
         static void Main(string[] args)
         {
             DirectoryInfo dataDirectory;
@@ -75,7 +77,7 @@ namespace scriptConvertHistoricWeatherCsvToUed
 
             ///     Ensure all locations have geocoordinate info (in location_geocoordinates.csv)
             List<Location> Locations = new List<Location>();
-            using (TextReader reader = File.OpenText(relativePathToLocations))
+            using (TextReader reader = File.OpenText(RELATIVE_PATH_TO_LOCATIONS))
             {
                 CsvReader csv = new CsvReader(reader);
                 Locations = csv.GetRecords<Location>().ToList();
@@ -92,7 +94,7 @@ namespace scriptConvertHistoricWeatherCsvToUed
             /// Create UED object
             ///     remake output directory   
             DirectoryInfo pathToUedOutput = new DirectoryInfo(Path.Combine(
-                dataDirectory.ToString(), relativePathToUedOut));
+                dataDirectory.ToString(), RELATIVE_PATH_TO_UED));
             if (Directory.Exists(pathToUedOutput.ToString()))
                 Directory.Delete(pathToUedOutput.ToString(), true);
 
@@ -108,12 +110,16 @@ namespace scriptConvertHistoricWeatherCsvToUed
                 //        loc.Fid.ToString() + ".UED"));
 
                 using (Database db = new Database(
-                    Path.Combine(dataDirectory.ToString(), relativePathToUedOut, loc.Fid.ToString() + ".UED")))
+                    Path.Combine(
+                        dataDirectory.ToString(), 
+                        RELATIVE_PATH_TO_UED, 
+                        loc.Fid.ToString() + ".UED")))
                 {
                     db.set_geolocation(
                         loc.Latitude,
                         loc.Longitude,
-                        0, 3,
+                        loc.Elevation,
+                        DEFAULT_SCREENING_HEIGHT,
                         loc.Fid.ToString(),
                         loc.Fid.ToString(),
                         "",
@@ -132,7 +138,8 @@ namespace scriptConvertHistoricWeatherCsvToUed
                             dirName, 
                             fileName));
 
-                        using (TextReader reader = File.OpenText(file.ToString()))
+                        using (TextReader reader = File.OpenText(
+                            file.ToString()))
                         {
                             CsvReader csv = new CsvReader(reader);
                             csv.Configuration.RegisterClassMap<WeatherClassMap>();
